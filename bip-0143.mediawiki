@@ -137,7 +137,9 @@ Refer to the reference implementation, reproduced below, for the precise algorit
     scriptPubKey: 2103c9f4836b9a4f77fc0d81f7bcb01b7f1b35916864b9476c241ce9fc198bd25432ac value: 6.25
     
   The second input comes from a P2WPKH witness program:
-    scriptPubKey: 00141d0f172a0ecb48aee1be1f2687d2963ae33f71a1, value: 6
+    scriptPubKey : 00141d0f172a0ecb48aee1be1f2687d2963ae33f71a1, value: 6
+    private key  : ***REMOVED***
+    public key   : ***REMOVED***
     
   To sign it with a nHashType of 1 (SIGHASH_ALL):
   
