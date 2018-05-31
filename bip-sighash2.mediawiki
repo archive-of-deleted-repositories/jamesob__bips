@@ -1,0 +1,274 @@
+<pre>
+  BIP: YYY
+  Layer: Consensus (soft fork)
+  Title: Signature checking operations in version 1 witness program
+  Author: Johnson Lau <jl2012@xbt.hk>
+  Comments-Summary: No comments yet.
+  Comments-URI: https://github.com/bitcoin/bips/wiki/Comments:BIP-0YYY
+  Status: Draft
+  Type: Standards Track
+  Created: 2017-07-19
+  License: BSD-3-Clause
+</pre>
+
+==Abstract==
+This BIP defines signature checking operations in version 1 witness program.
+
+==Motivation==
+Use of compact signatures to save space.
+
+More SIGHASH options, more flexibility
+
+==Specification==
+The following specification is applicable to <code>OP_CHECKSIG</code> and <code>OP_CHECKSIGVERIFY</code> in version 1 witness program.
+
+===Public Key Format===
+The pubic key MUST be exactly 33 bytes.
+
+If the first byte of the public key is a <code>0x02</code> or <code>0x03</code>, it MUST be a compressed public key. The signature is a Schnorr signature (To be defined separately)
+
+If the first byte of the public key is neither <code>0x02</code> nor <code>0x03</code>, the signature is assumed valid. This is for future upgrade.
+
+===Signature Format===
+The following rules apply only if the first byte of the public key is a <code>0x02</code> or <code>0x03</code>.
+
+If the signature size is 64 to 66 byte, it MUST be a valid Schnorr signature or the script execution MUST fail (cf. BIP146 NULLFAIL). The first 32-byte is the <code>R</code> value in big-endian. The next 32-byte is the <code>S</code> value in big-endian. The remaining data, if any, denotes the <code>hashtype</code> in little-endian (0 to 0xffff).
+
+<code>hashtype</code> MUST be minimally encoded. Any trailing zero MUST be removed.
+
+If the signature size is zero, it is accepted as the "valid failing" signature for <code>OP_CHECKSIG</code> to return a FALSE value to the stack. (cf. BIP66)
+
+The script execution MUST fail with a signature size not 0, 64, 65, or 66-byte.
+
+===New hashtype definitions===
+<code>hashtype</code> and the <code>SignatureHash</code> function are re-defined:
+
+  Double SHA256 of the serialization of:
+     1. nVersion (4-byte little endian)
+     2. hashPrevouts (32-byte hash)
+     3. hashSequence (32-byte hash)
+     4. outpoint (32-byte hash + 4-byte little endian)
+     5. scriptCode (serialized as scripts inside CTxOuts)
+     6. nAmount (8-byte little endian)
+     7. nSequence (4-byte little endian)
+     8. hashOutputs (32-byte hash)
+     9. nLocktime (4-byte little endian)
+    10. nInputIndex (4-byte little endian)
+    11. nFees (8-byte little endian)
+    12. hashtype (4-byte little endian)
+    13. sigversion (4-byte little endian for the fixed value 0x01000000)
+
+The bit 0 to 3 of <code>hashtype</code> denotes a value between 0 and 15:
+* If the value is 1, the signature is invalid.
+* If the value is 3 or below, <code>hashPrevouts</code> is the hash of all input, same as defined in BIP143. Otherwise, it is 32-byte of <code>0x0000......0000</code>.
+* If the value is 7 or below, <code>outpoint</code> is the <code>COutPoint</code> of the current input. Otherwise, it is 36-byte of <code>0x0000......0000</code>.
+* If the value is 0, <code>hashSequence</code> is the hash of all sequence, same as defined in BIP143. Otherwise, it is 32-byte of <code>0x0000......0000</code>.
+* If the value is even (including 0), <code>nSequence</code> is the <code>nSequence</code> of the current input. Otherwise, it is <code>0x00000000</code>.
+* If the value is 6, 7, 10, 11, 14, or 15, <code>nInputIndex</code> is <code>0x00000000</code>. Otherwise, it is the index of the current input.
+* If the value is 11 or below, <code>nAmount</code> is the value of the current input (same as BIP143). Otherwise, it is <code>0x0000000000000000</code>.
+
+{| class="wikitable"
+! Value
+! Outpoints
+! Sequence
+! Index
+! Amount
+! Example
+|-
+| 0
+| All
+| All
+| Yes
+| Yes
+| Sign all inputs and sequence. Like legacy SIGHASH_ALL, but have the flexibility to not sign all outputs.
+|-
+| 1
+| N/A
+| N/A
+| N/A
+| N/A
+| Invalid
+|-
+| 2
+| All
+| This
+| Yes
+| Yes
+| Require all inputs, but other inputs may use any sequence. Like legacy SIGHASH_NONE or SIGHASH_SINGLE, but have the flexibility to sign all outputs.
+|-
+| 3
+| All
+| No
+| Yes
+| Yes
+| Require all inputs. Do not sign any sequence, which could be signed by other signature in the same or different output.
+|-
+| 4
+| This
+| This
+| Yes
+| Yes
+| Like legacy SIGHASH_ANYONECANPAY, but require a specific input index.
+|-
+| 5
+| This
+| No
+| Yes
+| Yes
+| Like legacy SIGHASH_ANYONECANPAY, but require a specific input index, and not sign any sequence.
+|-
+| 6
+| This
+| This
+| No
+| Yes
+| Like legacy SIGHASH_ANYONECANPAY, and the signature is valid with any input index.
+|-
+| 7
+| This
+| No
+| No
+| Yes
+| Like legacy SIGHASH_ANYONECANPAY, and the signature is valid with any input index or sequence.
+|-
+| 8
+| No
+| This
+| Yes
+| Yes
+| No input outpoint. Valid only with specific values of sequence, input index, and amount.
+|-
+| 9
+| No
+| No
+| Yes
+| Yes
+| No input outpoint. Valid with any sequence, but only with specific values of input index and amount.
+|-
+| 10 
+| No
+| This
+| No
+| Yes
+| No input outpoint. Valid with any input index, but only with specific values of sequence and amount.
+|-
+| 11
+| No
+| No
+| No
+| Yes
+| No input outpoint. Valid with any sequence or input index, but only for a specific input amount. (Like BIP118)
+|-
+| 12
+| No
+| This
+| Yes
+| No
+| No input outpoint. Valid with any input amount, but only with specific values of sequence and input index.
+|-
+| 13
+| No
+| No
+| Yes
+| No
+| No input outpoint. Valid with any input amount, but only with specific values of sequence and input index.
+|-
+| 14
+| No
+| This
+| No
+| No
+| No input outpoint. Valid with any input index or amount, but only with a specific sequence.
+|-
+| 15
+| No
+| No
+| No
+| No
+| No input outpoint. Valid with any sequence, input index, and amount.
+|}
+
+The bit 4 and 5 of <code>hashtype</code> denotes a value between 0 and 3:
+* If the value is 0, <code>hashOutputs</code> is same as the SIGHASH_ALL case in BIP143 as a hash of all outputs.
+* If the value is 1, the signature is invalid.
+* If the value is 2, <code>hashOutputs</code> is same as the SIGHASH_SINGLE case in BIP143 as a hash of the matching output. If a matching output does not exist, <code>hashOutputs</code> is 32-byte of <code>0x0000......0000</code>.
+* If the value is 3, <code>hashOutputs</code> is 32-byte of <code>0x0000......0000</code>.
+
+If bit 6 is set (<code>SIGHASH2_NOFEE</code>), <code>nFees</code> is <code>0x0000000000000000</code>. Otherwise, it is the fee paid by the transaction.
+
+If bit 7 is set (<code>SIGHASH2_NOLOCKTIME</code>), <code>nLockTime</code> is <code>0x00000000</code>. Otherwise, it is the transaction <code>nLockTime</code>.
+
+If bit 8 is set (<code>SIGHASH2_NOVERSION</code>), <code>nVersion</code> is <code>0x00000000</code>. Otherwise, it is the transaction <code>nVersion</code>.
+
+If bit 9 is set (<code>SIGHASH2_NOSCRIPTCODE</code>), <code>scriptCode</code> is an empty script. Otherwise, it is same as described in BIP143.
+
+Bits 10 to 15 are reserved and ignored, but the signature still commits to their value as <code>hashtype</code>.
+
+<code>hashtype</code> of <code>0</code> is also known as <code>SIGHASH2_ALL</code>, which covers all the available options. In this case the singnature MUST be exactly 64-byte.
+
+<code>hashtype</code> of <code>0x3ff</code> is also known as <code>SIGHASH2_NONE</code>, which covers nothing and is effectively forfeiting the right related to this public key to anyone.
+
+
+==Rationale==
+===Signature Format===
+The current DER format is a complete waste of block space. The new format saves ~8 bytes per signature.
+
+===New hashtype definitions===
+The default and most commonly used case is <code>SIGHASH2_ALL</code>. Making it zero size to save space. As a result, the bit flags are defined in a negative way (e.g. NOLOCKTIME)
+
+Why decouple INPUT and SEQUENCE? Maybe you want NOINPUT but still have a relative lock-time?
+
+Why some combinations are missing? To save some bits for useless flags. If you sign all inputs, you must know its index and value. If you sign only this input, you must know its value, but probably don't know its index in the input vector.
+
+Why only allow signing all SEQUENCE if all INPUT are signed? It doesn't make much sense if you care about their sequence without even knowing what they are.
+
+Why signing INPUTINDEX? Legacy and BIP143 SINGLE|ANYONECANPAY behaves differently for input index. Better make it explicit and optional.
+
+Why signing FEE? Sometimes you don't sign all inputs / outputs but still want to make sure the fees amount is correct.
+
+Putting NOVERSION and NOSCRIPTCODE in the second byte makes most signatures below 66 bytes:
+
+* NOVERSION: Currently the only use of transaction version is to enforce BIP68. It could be safely assumed that version 2 is used. The only case one would like to use NOVERSION is to make the signature compatible with some unknown new features that use a different transaction version.
+
+* NOSCRIPTCODE: It would be very rare if one could make a signature without knowing what the script is (at least they know the public key). The only scenario that a NOSCRIPTCODE is really needed is the public key being reused in different scripts, and the user wants to use a single signature to cover all these scripts.
+
+Reserved bits: These bits are ignored but should normally be unset. Users MUST NOT set these bits until they are defined by a future proposal, or they might lose money.
+
+Why <code>sigversion</code>? Make sure the message digest won't collide with SIGHASH schemes in the past (legacy and BIP143) and future (which will use a different <code>sigversion</code>).
+
+==Examples==
+Equivalent SIGHASH2 value for other SIGHASH schemes:
+
+Legacy/BIP143 ALL: 0 (commit to everything)
+Legacy/BIP143 SINGLE with matching output: 0x62 (all input, one sequence, one output, no fee)
+Legacy SINGLE without matching output: 0x3ff (Not exactly. Both signatures commit to nothing, but the legacy one is valid only without a matched output. Practically, they are both "wildcard" signatures that allow anyone to spend any related UTXO)
+Legacy/BIP143 NONE: 0x72 (all input, one sequence, no output, no fee)
+Legacy/BIP143 ANYONECANPAY|ALL: 0x46 (one input without index, one sequence, all output, no fee)
+Legacy ANYONECANPAY|SINGLE with matching output: 0x64 (one input with index, one sequence, one output, no fee)
+Legacy/BIP143 ANYONECANPAY|NONE: 0x76 (one input without index, one sequence, no output, no fee)
+BIP143 SINGLE without matching output: 0x62 (all input, one sequence, no output, no fee)
+BIP143 ANYONECANPAY|SINGLE with matching output: 0x66 (one input without index, one sequence, one output, no fee)
+BIP143 ANYONECANPAY|SINGLE without matching output: 0x66 (one input without index, one sequence, no output, no fee)
+BIP118 NOINPUT: 0x14b (no input but with value, no index, no sequence, no fee, no scriptcode)
+
+Notes:
+
+1. In legacy and BIP143 SIGHASH, only ALL but not other types implicitly commits to the fee paid.
+2. Legacy SIGHASH always implicitly commits to the input value. BIP143 and BIP118 commits to that explicitly.
+3. Legacy and BIP143 SIGHASH behaves differently in the case of SINGLE without matching output. In legacy SIGHASH it is a true "wildcard signature" that allows anyone to spend any related UTXO. In BIP143 such signature applies only to a specific UTXO.
+4. BIP143 ANYONECANPAY never commits to the input index. Legacy ANYONECANPAY|SINGLE implicitly commits to the input index.
+
+
+
+== Backward compatibility ==
+This is a soft-fork.
+
+== Deployment ==
+Exact details TBD.
+
+== Reference Implementation ==
+https://github.com/jl2012/bitcoin/commits/sighash2 (To be updated)
+
+
+== Copyright ==
+This document is licensed as BSD 3-clause.
