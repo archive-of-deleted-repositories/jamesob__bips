@@ -63,11 +63,13 @@ The <code>hashtype</code>, masked with <code>0x03</code>, is <code>inputtype</co
 * <code>inputtype</code> of <code>0x01</code> is known as <code>SIGHASH2_ONEINPUT</code>, same as the <code>SIGHASH_ANYONECANPAY</code> case in BIP143.
 * <code>inputtype</code> of <code>0x03</code> is invalid and the script execution MUST fail.
 
-The <code>hashtype</code>, masked with <code>0x0c</code>, is <code>outputtype</code> determining the value of <code>hashOutputs</code>.
+The <code>hashtype</code>, masked with <code>0x1c</code>, is <code>outputtype</code> determining the value of <code>hashOutputs</code>.
 * If <code>outputtype</code> is <code>0x00</code>, <code>hashOutputs</code> is the hash of all outputs, same as the <code>SIGHASH_ALL</code> case in BIP143.
-* <code>outputtype</code> of <code>0x04</code> is known as <code>SIGHASH2_ONEOUTPUT</code>. <code>hashOutputs</code> is same as the <code>SIGHASH_SINGLE</code> case in BIP143 as a hash of the matching output. If a matching output does not exist, the script execution MUST fail.
-* <code>outputtype</code> of <code>0x08</code> is known as <code>SIGHASH2_NOOUTPUT</code>. <code>hashOutputs</code> is 32 <code>0x00</code> bytes, same as the <code>SIGHASH_NONE</code> case in BIP143.
-* <code>outputtype</code> of <code>0x0c</code> is invalid and the script execution MUST fail.
+* <code>outputtype</code> of <code>0x04</code> is known as <code>SIGHASH2_MATCHOUTPUT</code>. <code>hashOutputs</code> is same as the <code>SIGHASH_SINGLE</code> case in BIP143 as a hash of the matching output. If a matching output does not exist, the script execution MUST fail.
+* <code>outputtype</code> of <code>0x08</code> is known as <code>SIGHASH2_LASTOUTPUT</code>. <code>hashOutputs</code> is the double SHA256 hash of the highest index output.
+* <code>outputtype</code> of <code>0x0c</code> is known as <code>SIGHASH2_DUALOUTPUT</code>. <code>hashOutputs</code> is the double SHA256 hash of the matching output and last output serialized. If a matching output does not exist, or the matching output is the last output, the script execution MUST fail.
+* <code>outputtype</code> of <code>0x10</code> is known as <code>SIGHASH2_NOOUTPUT</code>. <code>hashOutputs</code> is 32 <code>0x00</code> bytes, same as the <code>SIGHASH_NONE</code> case in BIP143.
+* Any other <code>outputtype</code> values are invalid and the script execution MUST fail.
 
 If both <code>inputtype</code> and <code>outputtype</code> are <code>0x00</code>, <code>hashSequence</code> is the hash of all <code>nSequence</code> (same as BIP143). Otherwise, it is 32 <code>0x00</code> bytes.
 
@@ -77,11 +79,11 @@ If both <code>inputtype</code> and <code>outputtype</code> are <code>0x00</code>
 
 <code>nSequence</code> is the <code>nSequence</code> value of the current input (same as BIP143).
 
-If bit 4 of <code>hashtype</code> is set (<code>SIGHASH2_NOFEES</code>), <code>fees</code> is <code>0x0000000000000000</code>. Otherwise, it is the fee paid by the transaction.
+If bit 5 of <code>hashtype</code> is set (<code>SIGHASH2_NOFEES</code>), <code>fees</code> is <code>0x0000000000000000</code>. Otherwise, it is the fee paid by the transaction.
 
-If bit 5 of <code>hashtype</code> is set (<code>SIGHASH2_NOWITNESSSIZE</code>), <code>witness_size</code> is <code>0x00000000</code>. Otherwise, it is the serialized size of the witness of the transaction input.
+If bit 6 of <code>hashtype</code> is set (<code>SIGHASH2_NOWITNESSSIZE</code>), <code>witness_size</code> is <code>0x00000000</code>. Otherwise, it is the serialized size of the witness of the transaction input.
 
-Bits 6 to 7 of <code>hashtype</code> are reserved and ignored, but the signature still commits to their value as <code>hashtype</code>.
+Bit 7 of <code>hashtype</code> is ignored, but the signature still commits to its value as <code>hashtype</code>.
 
 <code>hashtype</code> of <code>0x00</code> is also known as <code>SIGHASH2_ALL</code>.
 
