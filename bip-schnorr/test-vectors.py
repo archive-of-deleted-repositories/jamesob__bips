@@ -2,7 +2,7 @@ import sys
 from reference import *
 
 def vector0():
-    seckey = 1
+    seckey = bytes_from_int(1)
     msg = bytes_from_int(0)
     sig = schnorr_sign(msg, seckey)
     pubkey = pubkey_gen(seckey)
@@ -11,10 +11,10 @@ def vector0():
     pubkey_point = point_from_bytes(pubkey)
     assert(pubkey_point[1] & 1 == 0)
 
-    return (bytes_from_int(seckey), pubkey, msg, sig, "TRUE", None)
+    return (seckey, pubkey, msg, sig, "TRUE", None)
 
 def vector1():
-    seckey = ***REMOVED***
+    seckey = bytes_from_int(***REMOVED***)
     msg = bytes_from_int(0x243F6A8885A308D313198A2E03707344A4093822299F31D0082EFA98EC4E6C89)
     sig = schnorr_sign(msg, seckey)
     pubkey = pubkey_gen(seckey)
@@ -23,10 +23,10 @@ def vector1():
     pubkey_point = point_from_bytes(pubkey)
     assert(pubkey_point[1] & 1 == 1)
 
-    return (bytes_from_int(seckey), pubkey, msg, sig, "TRUE", None)
+    return (seckey, pubkey, msg, sig, "TRUE", None)
 
 def vector2():
-    seckey = ***REMOVED***
+    seckey = bytes_from_int(***REMOVED***)
     msg = bytes_from_int(0x5E2D58D8B3BCDF1ABADEC7829054F90DDA9805AAB56C77333024B9D0A508B75C)
     sig = schnorr_sign(msg, seckey)
 
@@ -35,18 +35,19 @@ def vector2():
     R = point_from_bytes(sig[0:32])
     assert(not is_square(R[0]))
 
-    return (bytes_from_int(seckey), pubkey_gen(seckey), msg, sig, "TRUE", None)
+    return (seckey, pubkey_gen(seckey), msg, sig, "TRUE", None)
 
 def vector3():
-    seckey = ***REMOVED***
+    seckey = bytes_from_int(***REMOVED***)
     msg = bytes_from_int(0xFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFF)
     sig = schnorr_sign(msg, seckey)
-    return (bytes_from_int(seckey), pubkey_gen(seckey), msg, sig, "TRUE", "test fails if msg is reduced modulo p or n")
+    return (seckey, pubkey_gen(seckey), msg, sig, "TRUE", "test fails if msg is reduced modulo p or n")
 
 # Signs with a given nonce. Results in an invalid signature if y(kG) is not a square
 def schnorr_sign_fixed_nonce(msg, seckey0, k):
     if len(msg) != 32:
         raise ValueError('The message must be a 32-byte array.')
+    seckey0 = int_from_bytes(seckey0)
     if not (1 <= seckey0 <= n - 1):
         raise ValueError('The secret key must be an integer in the range 1..n-1.')
     P = point_mul(G, seckey0)
@@ -58,12 +59,12 @@ def schnorr_sign_fixed_nonce(msg, seckey0, k):
 # Creates a singature with a small x(R) by using k = 1/2
 def vector4():
     one_half = 0x7fffffffffffffffffffffffffffffff5d576e7357a4501ddfe92f46681b20a0
-    seckey = ***REMOVED***
+    seckey = bytes_from_int(***REMOVED***)
     msg = bytes_from_int(0x4DF3C3F68FCC83B27E9D42C90431A72499F17875C81A599B566C9889B9696703)
     sig = schnorr_sign_fixed_nonce(msg, seckey, one_half)
     return (None, pubkey_gen(seckey), msg, sig, "TRUE", None)
 
-default_seckey = ***REMOVED***
+default_seckey = bytes_from_int(***REMOVED***)
 default_msg = bytes_from_int(0x243F6A8885A308D313198A2E03707344A4093822299F31D0082EFA98EC4E6C89)
 
 def vector5():
